@@ -1,0 +1,225 @@
+<input id="range" type="range" value="20" min=10 max=48></input>
+<p id="score"></p>
+<canvas id="canvas"></canvas>
+<style>
+html,body{
+padding:0;
+margin:0;
+background-color:lightblue;
+}
+#canvas{
+position:absolute;
+  left:25vw;
+  top:30px;
+background-color:lightgrey;
+}
+#range{
+  top:7px;
+  left:calc((50vw - 125px / 2) + 30px);
+  width:125px;
+position:relative;
+}
+p{
+  position:absolute;
+  left:25vw;
+  top:0px;
+  transform: translateY(-10px);
+  padding:0;
+}
+</style>
+<script>
+//console.clear();
+const speed=100;
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const range=document.getElementById("range");
+const score=document.getElementById("score");
+let grid=parseInt(range.value);
+let unit;
+let prevMoveCount;
+let gameOver=false;
+let moveCount=0;
+let length=3;
+let headCoords={x:Math.round(grid/2),y:Math.round(grid/2)};
+let appleCoords={x:Math.round(grid/2+grid/4),y:Math.round(grid/2)};
+let snakeCoords=[headCoords];
+let timePrev=Date.now();
+let dir={x:0,y:0};
+let prevKey=null;
+canvas.width=window.innerWidth/1.2;
+canvas.height=window.innerHeight/1.2;
+range.addEventListener("change", (initCanvas))
+
+document.addEventListener("keydown", (event) => {
+  if(moveCount==-1){
+    prevMoveCount=-10;
+    start();
+  }
+  if(prevMoveCount!=moveCount){
+    switch(event.key){
+      case "ArrowDown":
+        if(prevKey!="ArrowUp"){
+          dir.y=-1;
+          dir.x=0;
+          
+        }
+        break;
+      case "ArrowUp":
+        if(prevKey!="ArrowDown"){
+          dir.y=1;
+          dir.x=0;
+          
+        }
+        break;
+      case "ArrowLeft":
+        if(prevKey!="ArrowRight"){
+          dir.y=0;
+          dir.x=-1;
+          
+        }
+        break;
+      case "ArrowRight":
+        if(prevKey!="ArrowLeft"){
+          dir.y=0;
+          dir.x=1;
+        }
+        break;
+    }
+  }
+  prevKey=event.key;
+  prevMoveCount=moveCount;
+});
+
+initCanvas();
+window.requestAnimationFrame(checkTime);
+
+function initCanvas(){
+  prevMoveCount=-5;
+  grid=parseInt(range.value);
+if(canvas.width<canvas.height){
+ unit=canvas.width/grid;
+  canvas.height=canvas.width;
+}else{
+ unit=canvas.height/grid;
+  canvas.width=canvas.height;
+}
+  start();
+}
+function start(){
+  moveCount=0;
+  headCoords={x:Math.round(grid/2),y:Math.round(grid/2)};
+  appleCoords={x:Math.round(grid/2+grid/4),y:Math.round(grid/2)};
+  snakeCoords=[headCoords];
+  length=3;
+  dir={x:0,y:0};
+  prevKey=null;
+  updateSnake(false);
+  gameOver=false;
+  updateSnake(true);
+  drawSnake();
+}
+function drawSquare(x,y,color,bool){
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'black';
+  ctx.beginPath();
+  ctx.fillRect(x*unit-unit, (grid+1-y)*unit-unit, unit, unit);
+  if(bool){
+  ctx.strokeRect(x*unit-unit, (grid+1-y)*unit-unit, unit, unit);
+  }
+    ctx.fill();
+}
+function checkTime(){
+  if(Date.now()-timePrev>speed){
+    canvas.width=canvas.width;
+    game();
+    timePrev=Date.now();
+  }
+  window.requestAnimationFrame(checkTime);
+}
+function drawApple(){
+  drawSquare(appleCoords.x,appleCoords.y,"pink",true);
+}
+function updateApple(){
+  while(length<(grid-2)*(grid-2)&&testTouch(appleCoords.x,appleCoords.y,0)){
+  appleCoords={x:Math.floor(Math.random() * (grid-2))+2,y:Math.floor(Math.random() * (grid-2))+2}
+  }
+}
+function testTouch(x,y,init){
+  //console.clear();
+  for(let i=init;i<snakeCoords.length;i++){
+    if(init==0){
+      if(headCoords.x==x&&headCoords.y==y){
+        return true;
+      }
+    }
+    if(snakeCoords[i].x==x&&snakeCoords[i].y==y){
+      return true;
+    }
+  }
+  return false;
+}
+function updateSnake(bool){
+  let headPrev={x: headCoords.x,y: headCoords.y};
+  if(prevKey!=null&&gameOver==false&&(headCoords.y>grid-1||headCoords.y<2||headCoords.x<2||headCoords.x>grid-1||testTouch(headCoords.x,headCoords.y,1))){
+    moveCount=-1;
+    drawSnake();
+  }else if(!(dir.x==0&&dir.y==0)){
+    if(bool){
+    moveCount++;
+    snakeCoords.push(headPrev);
+    headCoords.x+=dir.x;
+    headCoords.y+=dir.y;
+    }
+  }
+  if(snakeCoords.length>length){
+    while(snakeCoords.length>length){
+    snakeCoords.shift();
+    }
+  }
+}
+function drawSnake(){
+  for(let i=0;i<snakeCoords.length;i++){
+    drawSquare(snakeCoords[i].x,snakeCoords[i].y,"lightgreen",true);
+  }
+}
+function drawBorder(){
+  ctx.strokeStyle = 'lightgrey';
+  ctx.lineWidth = unit*2+1;
+  ctx.beginPath();
+  ctx.strokeRect(0, 0, canvas.width, canvas.height);
+  ctx.fill();
+  ctx.lineWidth = 1;
+}
+function drawGrid(){
+  let swap;
+  for(let i=2;i<=grid;i++){
+    if(i%2==0){
+      swap=0;
+    }else{
+      swap=1;
+    }
+    for(let j=2;j<=grid;j++){
+      if(j%2==0+swap){
+      drawSquare(j,i,"white");
+      }else{
+      drawSquare(j,i,"#dcdedc");
+      }
+    }
+  }
+}
+function drawText(){
+score.innerHTML="Snake | Score: "+(length-3)
+}
+function game(){
+  drawGrid();
+  drawBorder();
+  if(headCoords.x==appleCoords.x&&headCoords.y==appleCoords.y){
+    length++
+    updateApple();
+  }
+  drawApple();
+  updateSnake(true);
+  drawSnake();
+  drawText();
+}
+</script>
